@@ -3,7 +3,7 @@
 # random
 # pickle
 # Of the above only 'copy' is necessary for basic functionality
-
+import tensorflow as tf
 class hexPosition(object):
     """
     Objects of this class correspond to a game of Hex.
@@ -368,4 +368,6 @@ class hexPosition(object):
         file = open(path, 'ab')
         pickle.dump(self, file)
         file.close()
+
+
 
