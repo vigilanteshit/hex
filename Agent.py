@@ -32,7 +32,7 @@ class REINFORCE_Agent():
         return None
   
         
-    def learn_random(self, num_episodes:int, learning_rate:float, game:hex_engine.hexPosition) -> tuple:
+    def learn_random(self, num_episodes:int, learning_rate:float, game:hex_engine.hexPosition, policy_net:keras.Model) -> tuple:
         '''
         This method learns by playing against an oponent that exclusively executes random moves.
         
@@ -45,7 +45,7 @@ class REINFORCE_Agent():
                 A tuple containing the number of games played, the number of games won and an array containing the ratio of each episode
 
         '''
-        self.policy_net = PolicyNet.create_hex_policy_net(self.board_size)
+        self.policy_net = policy_net
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         
         for episode in range(num_episodes):
@@ -129,7 +129,7 @@ class REINFORCE_Agent():
         return self.number_of_games_trained, self.number_of_games_won, self.ratio_won_to_played   
 
                 
-    def learn_selfplay(self, num_episodes:int, learning_rate:float, game:hex_engine.hexPosition): 
+    def learn_selfplay(self, num_episodes:int, learning_rate:float, game:hex_engine.hexPosition, policy_net:keras.Model): 
         '''
         This methods lets the agent learn by playing against itself.
         
@@ -141,8 +141,8 @@ class REINFORCE_Agent():
             Returns:
                 A tuple containing the number of games played, the number of games won and an array containing the ratio of each episode
         '''
-        
-        self.policy_net = PolicyNet.create_hex_policy_net(self.board_size)
+        self.policy_net = policy_net
+        #self.policy_net = PolicyNet.create_hex_policy_net(self.board_size)
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         
         for episode in range(num_episodes):
@@ -245,7 +245,7 @@ class REINFORCE_Agent():
         self.save_model()
         return self.number_of_games_trained, self.number_of_games_won, self.ratio_won_to_played   
     
-    def learn_from_other_model(self, num_episodes:int, learning_rate:float, game:hex_engine.hexPosition, model:keras.Model):
+    def learn_from_other_model(self, num_episodes:int, learning_rate:float, game:hex_engine.hexPosition, model:keras.Model, policy_net:keras.Model):
         '''
         This method lets the agent learn by playing against another model, possibly an older version of itself.
         
@@ -259,7 +259,7 @@ class REINFORCE_Agent():
                 A tuple containing the number of games played, the number of games won and an array containing the ratio of each episode
         '''
         predecessor_policy_net = model
-        self.policy_net = PolicyNet.create_hex_policy_net(self.board_size)
+        self.policy_net = policy_net
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         
         for episode in range(num_episodes):
