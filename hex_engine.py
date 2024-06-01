@@ -4,6 +4,7 @@
 # pickle
 # Of the above only 'copy' is necessary for basic functionality
 import tensorflow as tf
+
 class hexPosition(object):
     """
     Objects of this class correspond to a game of Hex.
@@ -342,6 +343,7 @@ class hexPosition(object):
                 chosen = machine1(self.board, self.get_action_space())
             if self.player == -1:
                 chosen = machine2(self.board, self.get_action_space())
+            print(chosen)
             self.moove(chosen)
             if self.winner == 1:
                 self.print()
@@ -370,4 +372,4 @@ class hexPosition(object):
         file.close()
 
 
-
+    
