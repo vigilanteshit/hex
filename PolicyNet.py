@@ -32,7 +32,7 @@ def create_hex_policy_net(board_size):
     
 
     model = models.Model(inputs=input_layer, outputs=output_layer)
-    model.name = "hex_policy_conv_net_"
+    model.name = "simple_conv_net_"
     
     return model
     
@@ -74,7 +74,7 @@ def create_complex_hex_policy_net(board_size):
 
     # Create model
     model = models.Model(inputs=input_layer, outputs=output_layer)
-    model.name = "complex_hex_policy_conv_net_"
+    model.name = "conv_net_"
     
     return model
 
@@ -86,7 +86,7 @@ def create_simple_policy_net(board_size):
         initializer = initializers.HeNormal()
         
 
-        input_layer = Input(shape=(board_size * board_size, 1))
+        input_layer = Input(shape=(board_size, board_size, 1))
         
      
         x = layers.Dense(256, activation='relu', kernel_initializer=initializer)(input_layer)
@@ -97,7 +97,38 @@ def create_simple_policy_net(board_size):
         
         model = models.Model(inputs=input_layer, outputs=output_layer)
         
-        model.name = "simple_hex_policy_net_"
+        model.name = "simple_dense_net_"
         
         return model
 
+
+def create_dense_nn_policy_net(board_size):
+  
+        initializer = initializers.HeNormal()
+        
+
+        input_layer = Input(shape=(board_size, board_size, 1))
+        
+        x = layers.Flatten()(input_layer)
+        
+        x = layers.Dense(512, activation='relu', kernel_initializer=initializer)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.Dropout(0.3)(x)
+        
+        x = layers.Dense(256, activation='relu', kernel_initializer=initializer)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.Dropout(0.3)(x)
+        
+        x = layers.Dense(128, activation='relu', kernel_initializer=initializer)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.Dropout(0.3)(x)
+        
+        x = layers.Dense(64, activation='relu', kernel_initializer=initializer)(x)
+        
+        output_layer = layers.Dense(board_size * board_size, activation='softmax', kernel_initializer=initializer)(x)
+        
+        model = models.Model(inputs=input_layer, outputs=output_layer)
+        
+        model.name = "dense_nn_net_"
+        
+        return model

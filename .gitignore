@@ -21,3 +21,5 @@ node_modules/
 # Ignore build files
 build/
 dist/
+model_dump/
+training_runs/
