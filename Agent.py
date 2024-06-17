@@ -522,7 +522,7 @@ class REINFORCE_Agent():
                 actions_of_all_episodes.append(episode_actions)  
                 episode_rewards[-1] =  episode_rewards[-1] + self.similarity_penalty(actions_of_all_episodes, SIMILARITY_PENALTY, True)
                 
-                print(f"Process ID {os.getpid()}: Learning Strategy: Other Model - White") 
+                print(f"Process ID {os.getpid()}: Learning Strategy: Other Model - White ({model_path})") 
                 #game.print()        
                 # calculate returns    
                 G = 0 
@@ -649,7 +649,7 @@ class REINFORCE_Agent():
                 actions_of_all_episodes.append(episode_actions)  
                 episode_rewards[-1] =  episode_rewards[-1] + self.similarity_penalty(actions_of_all_episodes, SIMILARITY_PENALTY, True)
                 
-                print(f"Process ID {os.getpid()}: Learning Strategy: Other Model - Black") 
+                print(f"Process ID {os.getpid()}: Learning Strategy: Other Model - Black ({model_path})") 
                 #game.print()        
                 # calculate returns    
                 G = 0 
@@ -1156,7 +1156,7 @@ class REINFORCE_Agent():
         
         # Evaluate Model --> DO NOT TOUCH
         self.evaluate_agent(BASELINE_MODEL_PATH, game, NUMBER_OF_EVALUATION_GAMES)
-        self.evaluate_agent(self._get_prev_model(), game, NUMBER_OF_EVALUATION_GAMES, self_play=True)
+        self.evaluate_agent(self._get_prev_model(), game, NUMBER_OF_EVALUATION_GAMES, baseline_model=True)
         
         # Write Parameters and Results in training_log --> DO NOT TOUCH
         row = [f'{training_run_id}', 

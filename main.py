@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     
     # Prepare parameter list
-    number_of_episodes_list = [40] # Number of episodes per training layer
+    number_of_episodes_list = [5] # Number of episodes per training layer
     learning_rate_list = [1e-4]
     brevity_encouragment = [-0.1] # small positive number encourages shorter games, a negative number encourages longer games
     similarity_panelty_list = [-0.1] # small negative number encourages vertical exploration, positive number encourages horizontal moves
