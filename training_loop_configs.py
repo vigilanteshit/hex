@@ -39,3 +39,14 @@ loop_code_baseline4 ='''for episode in range(number_of_episodes):
                 self.learn_selfplay_black(episode, learning_rate, game, policy_net, RANDOM_CHOICE, reward_type='explore-growth-reversed')
                 #loop_code_baseline4
         '''
+        
+loop_code_advanced1 ='''for episode in range(number_of_episodes):
+                
+                self.learn_from_other_model(episode, learning_rate, game, policy_net, RANDOM_CHOICE, reward_type='short')   
+                self.learn_from_other_model_black(episode, learning_rate, game, policy_net, RANDOM_CHOICE, reward_type='reversed-short') 
+                self.learn_selfplay(episode, learning_rate, game, policy_net, RANDOM_CHOICE, reward_type='short')
+                self.learn_selfplay_black(episode, learning_rate, game, policy_net, RANDOM_CHOICE, reward_type='reversed-short')            
+                self.learn_selfplay(episode, learning_rate, game, policy_net, RANDOM_CHOICE, reward_type='explore')
+                self.learn_selfplay_black(episode, learning_rate, game, policy_net, RANDOM_CHOICE, reward_type='reversed-explore')
+                #loop_code_advanced1
+        '''

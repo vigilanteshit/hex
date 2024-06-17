@@ -303,6 +303,7 @@ class REINFORCE_Agent():
                 A tuple containing the number of games played, the number of games won and an array containing the ratio of each episode
         '''
         actions_of_all_episodes = []
+        flipped = False
         
         self.policy_net = policy_net
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate, clipvalue=GRADIENT_CLIPPING_PARAMETER)
@@ -320,7 +321,7 @@ class REINFORCE_Agent():
             
             game.reset()
      
-            flipped = False
+            
             
             
             
@@ -349,7 +350,7 @@ class REINFORCE_Agent():
                     game.evaluate()
             
                     if game.winner != 0:
-                        episode_rewards.append(-game.winner)
+                        episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
                         number_of_moves += 1
                         break
                     else: # Flipped board
@@ -420,7 +421,7 @@ class REINFORCE_Agent():
         #self.save_model()
         return self.number_of_games_trained, self.number_of_games_won, self.ratio_won_to_played   
     
-    def learn_from_other_model(self, num_episodes:int, learning_rate:float, game:hex_engine.hexPosition, model_path:str, policy_net:keras.Model, random_choice):
+    def learn_from_other_model(self, num_episodes:int, learning_rate:float, game:hex_engine.hexPosition, policy_net:keras.Model, random_choice, reward_type:str):
         '''
         
         This method lets the agent learn by playing against another model, possibly an older version of itself.
@@ -434,9 +435,11 @@ class REINFORCE_Agent():
             Returns:
                 A tuple containing the number of games played, the number of games won and an array containing the ratio of each episode
         '''
+        actions_of_all_episodes = []
         flipped = False
         
         adveserial_net = REINFORCE_Agent(self.board_size)
+        model_path = self._get_prev_model()
         adveserial_net.policy_net = adveserial_net.load_model(model_path)
         predecessor_policy_net = adveserial_net.policy_net 
         self.policy_net = policy_net
@@ -481,7 +484,7 @@ class REINFORCE_Agent():
                     game.evaluate()
              
                     if game.winner != 0:
-                        episode_rewards.append(self.get_reward(episode_actions, game, reward_function='explore', flipped=flipped))
+                        episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
                         number_of_moves += 1
                         break
                     else:
@@ -507,13 +510,17 @@ class REINFORCE_Agent():
                         game.evaluate()
 
                         if game.winner != 0:
-                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function='explore', flipped=flipped))
+                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
                             break
                         else:
-                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function='explore', flipped=flipped))
+                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
                 
                 if game.winner == 1:
                     self.number_of_games_won += 1
+                    
+                # Add similarity penalty
+                actions_of_all_episodes.append(episode_actions)  
+                episode_rewards[-1] =  episode_rewards[-1] + self.similarity_penalty(actions_of_all_episodes, SIMILARITY_PENALTY, True)
                 
                 print(f"Process ID {os.getpid()}: Learning Strategy: Other Model - White") 
                 #game.print()        
@@ -532,6 +539,133 @@ class REINFORCE_Agent():
             
             # calculate gradients and update model      
             grads = tape.gradient(policy_loss, self.policy_net.trainable_weights)    
+            optimizer.apply(grads, self.policy_net.trainable_weights)
+            
+            self.ratio_won_to_played.append(self.number_of_games_won/self.number_of_games_trained)
+
+
+        #self.save_model()
+        return self.number_of_games_trained, self.number_of_games_won, self.ratio_won_to_played   
+    
+    def learn_from_other_model_black(self, num_episodes:int, learning_rate:float, game:hex_engine.hexPosition, policy_net:keras.Model, random_choice, reward_type:str):
+        '''
+        
+        This method lets the agent learn by playing against another model, possibly an older version of itself.
+        
+            Parameters:
+                num_episodes:int The number of episodes (aka games) to be played
+                learning_rate:float The learning rate
+                game:hex_engine.hexPosition An instance of the hex engine
+                model:keras.Model some other model
+            
+            Returns:
+                A tuple containing the number of games played, the number of games won and an array containing the ratio of each episode
+        '''
+        actions_of_all_episodes = []
+        flipped = False
+        
+        adveserial_net = REINFORCE_Agent(self.board_size)
+        model_path = self._get_prev_model()
+        adveserial_net.policy_net = adveserial_net.load_model(model_path)
+        predecessor_policy_net = adveserial_net.policy_net 
+        self.policy_net = policy_net
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        
+        for episode in range(num_episodes):
+            
+            episode_states = []
+            episode_actions = []
+            episode_rewards = []
+            action_log_probabilites = []
+            returns = []
+            policy_loss = []
+            number_of_moves = 0
+            
+            game.reset()
+            
+            
+            with tf.GradientTape() as tape:
+                while True:
+                    
+                    # Convert the board (aka the current game configuration or state) to a tf tensor of shape (board_size, board_size, 1)
+                    board_tensor = tf.convert_to_tensor(game.board, dtype=tf.float32)
+                    game_state_tensor = tf.reshape(board_tensor, (1, self.board_size , self.board_size , 1))
+                    
+                    # forward pass
+                    model_output = predecessor_policy_net(game_state_tensor) #output shape (1, board_size)
+                    log_model_output = tf.math.log(model_output)
+                
+                    # select next action 
+                    next_action, best_action_index = self.get_next_action(game, game.get_action_space(), model_output.numpy()[0])
+                    
+                    if np.random.choice([True, False], 2, p=[random_choice, 1 - random_choice])[0]:
+                        game._random_moove()
+                    else:
+                        game.moove(next_action)
+                        
+                    # make a move
+           
+                    
+                    game.evaluate()
+             
+                    if game.winner != 0:
+                        episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
+                        number_of_moves += 1
+                        break
+                    else:
+                        number_of_moves += 1
+                        
+                        flipped_board = game.recode_black_as_white()
+                        flipped_board_tensor = tf.convert_to_tensor(game.recode_black_as_white(), dtype=tf.float32)
+                        flipped_game_state_tensor = tf.reshape(flipped_board_tensor, (1, self.board_size , self.board_size , 1))
+                        
+                        # forward pass
+                        model_output = self.policy_net(flipped_game_state_tensor) #output shape (1, board_size)
+                        log_model_output = tf.math.log(model_output)
+                    
+                        # select next action 
+                        next_action, best_action_index = self.get_next_action(game, game.get_action_space(), model_output.numpy()[0])
+                        
+                        game.moove(next_action)
+                        episode_states.append(flipped_board_tensor)
+                        episode_actions.append(next_action)
+                        
+                        action_log_probabilites.append(log_model_output[0,best_action_index])
+
+    
+                        
+                        game.evaluate()
+
+                        if game.winner != 0:
+                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
+                            break
+                        else:
+                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
+                
+                if game.winner == 1:
+                    self.number_of_games_won += 1
+                    
+                # Add similarity penalty
+                actions_of_all_episodes.append(episode_actions)  
+                episode_rewards[-1] =  episode_rewards[-1] + self.similarity_penalty(actions_of_all_episodes, SIMILARITY_PENALTY, True)
+                
+                print(f"Process ID {os.getpid()}: Learning Strategy: Other Model - Black") 
+                #game.print()        
+                # calculate returns    
+                G = 0 
+                for reward in reversed(episode_rewards):
+                    G = reward + G
+                    returns.insert(0, G)
+                
+                # generate loss
+                for log_prob, G in zip(action_log_probabilites, returns):
+                    policy_loss.append(-log_prob * G * learning_rate)
+                    
+        
+            self.number_of_games_trained += 1
+            
+            # calculate gradients and update model      
+            grads = tape.gradient(policy_loss, self.policy_net.trainable_weights)   
             optimizer.apply(grads, self.policy_net.trainable_weights)
             
             self.ratio_won_to_played.append(self.number_of_games_won/self.number_of_games_trained)
@@ -788,7 +922,7 @@ class REINFORCE_Agent():
         if baseline_model:
             adveserial_net = REINFORCE_Agent(self.board_size)
             adveserial_net.policy_net = adveserial_net.load_model(another_player_path)   
-            print(f'Evaluating Agent - Self Play {adveserial_net.policy_net.name}')
+            print(f'Evaluating Agent - Previous Model {adveserial_net.policy_net.name}')
         
         print(f'\n\n******************* Process {os.getpid()} Evaluating Agent - Random Player *******************\n\n')
         print(f'******************* Process {os.getpid()} Number of Games {number_of_games} *******************\n\n')
@@ -1022,7 +1156,7 @@ class REINFORCE_Agent():
         
         # Evaluate Model --> DO NOT TOUCH
         self.evaluate_agent(BASELINE_MODEL_PATH, game, NUMBER_OF_EVALUATION_GAMES)
-        #pred_eval_won, pred_eval_number_of_mooves_won_avg = self.evaluate_agent(self._get_prev_model(), game, NUMBER_OF_EVALUATION_GAMES, self_play=True)
+        self.evaluate_agent(self._get_prev_model(), game, NUMBER_OF_EVALUATION_GAMES, self_play=True)
         
         # Write Parameters and Results in training_log --> DO NOT TOUCH
         row = [f'{training_run_id}', 
