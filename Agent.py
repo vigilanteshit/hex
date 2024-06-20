@@ -45,6 +45,7 @@ class REINFORCE_Agent():
         self.eval_random_won = 0
         self.eval_baseline_won = 0
         self.layer_config = ""
+        self.value_mean = []
 
 
     
@@ -140,10 +141,12 @@ class REINFORCE_Agent():
                     self.number_of_games_won += 1
                           
                 print(f"Process ID {os.getpid()}: Learning Strategy: Random Play - White") 
-                # calculate returns    
+                # calculate returns 
+                game.print()   
+                discounting = 0.99
                 G = 0 
                 for reward in reversed(episode_rewards):
-                    G = reward + G
+                    G = reward + G * discounting
                     returns.insert(0, G)
                 
                 # generate loss
@@ -224,7 +227,7 @@ class REINFORCE_Agent():
                     game.evaluate()
             
                     if game.winner != 0:
-                        episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
+                        episode_rewards.append(self.get_reward(episode_actions, game, None, flipped=False))
                         number_of_moves += 1
                         break
                     else: 
@@ -251,10 +254,10 @@ class REINFORCE_Agent():
                         game.evaluate()
 
                         if game.winner != 0:
-                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
+                            episode_rewards.append(self.get_reward(episode_actions, game, None, flipped=False))
                             break
                         else:
-                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
+                            episode_rewards.append(self.get_reward(episode_actions, game, None, flipped=False))
                 
                 if game.winner == 1:
                     self.number_of_games_won += 1
@@ -264,11 +267,15 @@ class REINFORCE_Agent():
                 episode_rewards[-1] =  episode_rewards[-1] + self.similarity_penalty(actions_of_all_episodes, SIMILARITY_PENALTY, True)
                 
                 # calculate returns    
-                print(f"Process ID {os.getpid()}: Learning Strategy: Self Play - White")      
+                print(f"Process ID {os.getpid()}: Learning Strategy: Self Play - White")     
+                game.print()  
+                discounting = 0.8
                 G = 0 
                 for reward in reversed(episode_rewards):
-                    G = reward + G
+                    G = reward + G * discounting
                     returns.insert(0, G)
+                
+                
         
                 
                 # generate loss
@@ -279,6 +286,7 @@ class REINFORCE_Agent():
 
             
             self.number_of_games_trained += 1
+            self.value_mean.append(G/self.number_of_games_trained)
             
             # calculate gradients and update model      
             grads = tape.gradient(policy_loss, self.policy_net.trainable_weights)    
@@ -335,7 +343,7 @@ class REINFORCE_Agent():
                     
                     # forward pass
                     model_output = self.policy_net(game_state_tensor) #output shape (1, board_size)
-                    log_model_output = tf.math.log(model_output)
+                    #log_model_output = tf.math.log(model_output)
                 
                     # select next action 
                     next_action, best_action_index = self.get_next_action(game, game.get_action_space(), model_output.numpy()[0])
@@ -348,9 +356,10 @@ class REINFORCE_Agent():
                         game.moove(next_action)
                         
                     game.evaluate()
-            
+
+                    # if game ends collect reward
                     if game.winner != 0:
-                        episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
+                        #episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
                         number_of_moves += 1
                         break
                     else: # Flipped board
@@ -379,12 +388,12 @@ class REINFORCE_Agent():
                         game.evaluate()
 
                         if game.winner != 0:
-                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
+                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=True))
                             break
                         else:
-                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=flipped))
-                
-                if game.winner == 1:
+                            episode_rewards.append(self.get_reward(episode_actions, game, reward_function=reward_type, flipped=True))
+                print(game.winner)
+                if game.winner == -1:
                     self.number_of_games_won += 1
                     
                 # Add similarity penalty
@@ -392,11 +401,14 @@ class REINFORCE_Agent():
                 episode_rewards[-1] =  episode_rewards[-1] + self.similarity_penalty(actions_of_all_episodes, SIMILARITY_PENALTY, True)
                 
                 # calculate returns    
-                print(f"Process ID {os.getpid()}: Learning Strategy: Self Play - Black")          
-                
+                print(f"Process ID {os.getpid()}: Learning Strategy: Self Play - Black")  
+                game.print()          
+                discounting = 0.8
                 G = 0 
                 for reward in reversed(episode_rewards):
-                    G = reward + G
+                    #print(reward)
+                    #print(f'G: {G}')
+                    G = reward + G * discounting
                     returns.insert(0, G)
         
                 
@@ -410,6 +422,7 @@ class REINFORCE_Agent():
 
             
             self.number_of_games_trained += 1
+            self.value_mean.append(G/self.number_of_games_trained)
             
             # calculate gradients and update model      
             grads = tape.gradient(policy_loss, self.policy_net.trainable_weights)    
@@ -525,9 +538,10 @@ class REINFORCE_Agent():
                 print(f"Process ID {os.getpid()}: Learning Strategy: Other Model - White ({model_path})") 
                 #game.print()        
                 # calculate returns    
+                discounting = 0.99
                 G = 0 
                 for reward in reversed(episode_rewards):
-                    G = reward + G
+                    G = reward + G * discounting
                     returns.insert(0, G)
                 
                 # generate loss
@@ -652,9 +666,10 @@ class REINFORCE_Agent():
                 print(f"Process ID {os.getpid()}: Learning Strategy: Other Model - Black ({model_path})") 
                 #game.print()        
                 # calculate returns    
+                discounting = 0.5
                 G = 0 
                 for reward in reversed(episode_rewards):
-                    G = reward + G
+                    G = reward + G * discounting
                     returns.insert(0, G)
                 
                 # generate loss
@@ -727,6 +742,8 @@ class REINFORCE_Agent():
         '''
         
         if reward_function == None:
+            if flipped:
+                return -game.winner
             return game.winner
         else:
             game.evaluate()
@@ -822,7 +839,7 @@ class REINFORCE_Agent():
         if len(episode_actions) > 3:
             if (abs(episode_actions[len(episode_actions) - 1 - 1][1] - episode_actions[len(episode_actions) - 1 - 3][1]) == 3):
                 penal = penal + penalty  * self.similarity_penalty_exponential_decay(self.number_of_iterations , rate=0.001)[self.number_of_games_trained] 
-        return penal  + game.winner
+        return penal  - game.winner
     
     def _reward_encourage_exlporation_reveresed_growth(self, episode_actions: list[tuple], penalty:float, game:hex_engine.hexPosition) -> float:
         '''
@@ -1004,9 +1021,10 @@ class REINFORCE_Agent():
         
         # forward pass
         model_output = self.policy_net(game_state_tensor) #output shape (1, board_size)
-
+        print(action_space)
         # select next action 
         next_action, best_action_index = self.get_next_action_play(action_space, model_output.numpy()[0])
+        print(next_action)
         
         return next_action
     
@@ -1099,7 +1117,7 @@ class REINFORCE_Agent():
         # if not os.path.isdir(path_plots_dir):
         #     os.mkdir(path_plots_dir)
         path_plots = os.path.join(path_training_runs,f'{training_run_id}_{self.policy_net.name}{current_time}_{pid}.png')
-            
+        path_plots_rewards = os.path.join(path_training_runs,f'{training_run_id}_{self.policy_net.name}{current_time}_{pid}_rewards.png')
         random_old_model = self._get_random_old_model()
         #random_old_model_path = os.path.join(dump_path, random_old_model)
               
@@ -1166,7 +1184,7 @@ class REINFORCE_Agent():
                f'{self.extract_reward_structure(training_loop)}',
                f'{self.extract_training_loop_name(training_loop)}', 
                f'{training_time}', 
-               f'{self.number_of_iterations}', 
+               f'{self.number_of_games_trained}', 
                f'{learning_rate}', 
                f'{SIMILARITY_PENALTY}', 
                f'{SIMILARITY_PENALTY_DECAY_RATE}', 
@@ -1191,6 +1209,16 @@ class REINFORCE_Agent():
         plt.title(f'Ratio of Won Games to Played Games\nlr:{learning_rate}/sp:{similarity_panelty}/msp:{move_similarity_penalty}/spd:{similarity_penalty_decay_rate}/rc:{random_choice}/gc:{gradient_clipping_parameter}')
         plt.grid(True)
         plt.savefig(path_plots)  # Save the plot as an image file
+        plt.close()  
+  
+    
+        plt.figure(figsize=(10, 6))
+        plt.plot(range(len(self.value_mean)), ratio, marker='o', markersize=2)
+        plt.xlabel('Games Played')
+        plt.ylabel('Ratio: Won/Played (Training)')
+        plt.title(f'Ratio of Won Games to Played Games\nlr:{learning_rate}/sp:{similarity_panelty}/msp:{move_similarity_penalty}/spd:{similarity_penalty_decay_rate}/rc:{random_choice}/gc:{gradient_clipping_parameter}')
+        plt.grid(True)
+        plt.savefig(path_plots_rewards)  # Save the plot as an image file
         plt.close()  
   
 

@@ -261,7 +261,7 @@ class hexPosition(object):
                         break
                 self.moove(human_input)
             else:
-                chosen = machine(self.board, possible_actions)
+                chosen = machine(self.recode_black_as_white(), possible_actions)
                 self.moove(chosen)
             if self.winner == 1:
                 self.print()
@@ -342,6 +342,7 @@ class hexPosition(object):
             if self.player == 1:
                 chosen = machine1(self.board, self.get_action_space())
             if self.player == -1:
+                #chosen = machine2(self.board, self.get_action_space())
                 chosen = machine2(self.board, self.get_action_space())
             print(chosen)
             self.moove(chosen)

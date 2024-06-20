@@ -42,20 +42,20 @@ def create_complex_hex_policy_net(board_size):
     input_layer = layers.Input(shape=(board_size, board_size, 1))
 
     # Convolutional layers with Batch Normalization and ReLU activation
-    x = layers.Conv2D(32, (3, 3), activation=None, padding='same', kernel_initializer=initializer)(input_layer)
+    x = layers.Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer=initializer)(input_layer)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
 
-    x = layers.Conv2D(64, (3, 3), activation=None, padding='same', kernel_initializer=initializer)(x)
+    x = layers.Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer=initializer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
 
-    x = layers.Conv2D(128, (3, 3), activation=None, padding='same', kernel_initializer=initializer)(x)
+    x = layers.Conv2D(128, (3, 3), activation='relu', padding='same', kernel_initializer=initializer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
 
     # Optional: Add more convolutional layers if needed
-    x = layers.Conv2D(256, (3, 3), activation=None, padding='same', kernel_initializer=initializer)(x)
+    x = layers.Conv2D(256, (3, 3), activation='relu', padding='same', kernel_initializer=initializer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.ReLU()(x)
 
