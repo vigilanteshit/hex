@@ -129,13 +129,13 @@ def create_dense_nn_policy_net(board_size):
         
         model = models.Model(inputs=input_layer, outputs=output_layer)
         
-        model.name = "dense_nn_net_"
+        model.name = "dense_net_"
         
         return model
 
 
 
-
+                        #################### ResNet50 #####################
 
 def identity_block(X, f, filters, stage, block):
     conv_name_base = 'res' + str(stage) + block + '_branch'
@@ -228,3 +228,33 @@ def ResNet50(input_shape=(64, 64, 1), classes=64*64):
     return model
 
 
+def load_model_for_generalizaton(larger_board_size:int, smaller_model_path:str):
+    smaller_model = keras.models.load_model(smaller_model_path)
+
+    if smaller_model.name == 'ResNet50':
+
+        larger_model = ResNet50(input_shape=(larger_board_size, larger_board_size, 1), classes=larger_board_size*larger_board_size)
+        
+        for layer in smaller_model.layers:
+            if 'conv' in layer.name or 'bn' in layer.name or 'dense' in layer.name:
+                try:
+                    larger_model.get_layer(name=layer.name).set_weights(layer.get_weights())
+                    print(f'Loaded weights for layer: {layer.name}')
+                except:
+                    print(f'Skipped Layer: {layer.name}')
+
+    if smaller_model.name == 'conv_net_' or smaller_model.name == 'dense_net_' :
+
+        larger_model = create_complex_hex_policy_net(larger_board_size)
+         
+        for layer in smaller_model.layers:
+            if layer.name in [l.name for l in larger_model.layers]:
+                try:
+                    larger_model.get_layer(name=layer.name).set_weights(layer.get_weights())
+                    print(f'Loaded weights for layer: {layer.name}')
+                except ValueError:
+                    print(f'Skipped layer: {layer.name}')
+
+
+            
+    return larger_model

@@ -3,8 +3,10 @@ __pycache__/
 *.py[cod]
 
 # Ignore virtual environment
-venv/
+.venv/
 env/
+/model_dump
+/training_runs
 
 # Ignore macOS specific files
 .DS_Store

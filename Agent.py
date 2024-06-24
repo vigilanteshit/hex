@@ -154,6 +154,7 @@ class REINFORCE_Agent():
                     policy_loss.append(-log_prob * G * learning_rate)
 
             self.number_of_games_trained += 1
+            print(f'Episodes Trained: {self.number_of_games_trained}')
             
             # calculate gradients and update model      
             grads = tape.gradient(policy_loss, self.policy_net.trainable_weights)    
@@ -286,6 +287,7 @@ class REINFORCE_Agent():
 
             
             self.number_of_games_trained += 1
+            print(f'Episodes Trained: {self.number_of_games_trained}')
             self.value_mean.append(G/self.number_of_games_trained)
             
             # calculate gradients and update model      
@@ -422,6 +424,7 @@ class REINFORCE_Agent():
 
             
             self.number_of_games_trained += 1
+            print(f'Episodes Trained: {self.number_of_games_trained}')
             self.value_mean.append(G/self.number_of_games_trained)
             
             # calculate gradients and update model      
@@ -701,8 +704,13 @@ class REINFORCE_Agent():
         path = os.path.join(path,f'{self.policy_net.name}{current_time}.keras')
         self.policy_net.save(path) 
             
-    def load_model(self, path_to_model:str):     
+    def load_model(self, path_to_model:str):  
+ 
         return keras.models.load_model(path_to_model)
+    
+    def load_model_eval(self, path_to_model:str):  
+        self.policy_net = keras.models.load_model(path_to_model)
+  
     
 
     def play_human_vs_machine(self, game:hex_engine.hexPosition, model_path:str):
@@ -996,7 +1004,8 @@ class REINFORCE_Agent():
 
                     if game.winner != 0:  
                         break
-           
+        
+            game.print()
         
             if game.winner == 1:
                 if baseline_model:
@@ -1014,17 +1023,40 @@ class REINFORCE_Agent():
                 board:list[list[int]] The state of the board
                 action_space:list[tuple] Available action space
         '''
-        
-        # Convert the board (aka the current game configuration or state) to a tf tensor of shape (board_size, board_size, 1)
-        board_tensor = tf.convert_to_tensor(board, dtype=tf.float32)
-        game_state_tensor = tf.reshape(board_tensor, (1, self.board_size , self.board_size , 1))
-        
-        # forward pass
-        model_output = self.policy_net(game_state_tensor) #output shape (1, board_size)
-        print(action_space)
-        # select next action 
-        next_action, best_action_index = self.get_next_action_play(action_space, model_output.numpy()[0])
-        print(next_action)
+
+        first_move = False
+        you_are_black = False
+
+        if first_move == False:
+            first_move = True
+            if len(action_space) != 49:
+                you_are_black = True
+
+        if you_are_black == True:
+            
+            # Convert the board (aka the current game configuration or state) to a tf tensor of shape (board_size, board_size, 1)
+            board_tensor = tf.convert_to_tensor(self.recode_black_as_white(board=board), dtype=tf.float32)
+            game_state_tensor = tf.reshape(board_tensor, (1, self.board_size , self.board_size , 1))
+            
+            # forward pass
+            model_output = self.policy_net(game_state_tensor) #output shape (1, board_size)
+            print(action_space)
+            # select next action 
+            next_action, best_action_index = self.get_next_action_play(action_space, model_output.numpy()[0])
+            print(next_action)
+                
+
+        else:
+            # Convert the board (aka the current game configuration or state) to a tf tensor of shape (board_size, board_size, 1)
+            board_tensor = tf.convert_to_tensor(board, dtype=tf.float32)
+            game_state_tensor = tf.reshape(board_tensor, (1, self.board_size , self.board_size , 1))
+            
+            # forward pass
+            model_output = self.policy_net(game_state_tensor) #output shape (1, board_size)
+            print(action_space)
+            # select next action 
+            next_action, best_action_index = self.get_next_action_play(action_space, model_output.numpy()[0])
+            print(next_action)
         
         return next_action
     
@@ -1124,11 +1156,7 @@ class REINFORCE_Agent():
         predecessor_model_path = self._get_prev_model()
  
         ############################################# Execution of Training Loop - Start #################################################
-        
-        '''
-        These trainig layers get executed sequentially and all train the same model
-        
-        '''
+    
         
         self.extract_reward_structure(training_loop)
         
@@ -1147,23 +1175,7 @@ class REINFORCE_Agent():
                                                learning_rate, 
                                                RANDOM_CHOICE,
                                                path_model)
-        
-        
-        
-                # played, won, ratio  = self.learn_selfplay(episode, learning_rate, game, policy_net, RANDOM_CHOICE, reward_type='explore')    # layer: s
-                # played, won, ratio  = self.learn_selfplay_black(episode, learning_rate, game, policy_net, RANDOM_CHOICE) # layer: b
-                # played, won, ratio  = self.learn_from_other_model(episode, learning_rate, game, random_old_model_path, self.policy_net, RANDOM_CHOICE) # layer: r
-                # played, won, ratio  = self.learn_selfplay(episode, learning_rate, game, policy_net, RANDOM_CHOICE, reward_type='explore') # layer: s
-                # played, won, ratio  = self.learn_selfplay_black(episode, learning_rate, game, policy_net, RANDOM_CHOICE) # layer: b
-                # played, won, ratio  = self.learn_from_other_model(episode, learning_rate, game, predecessor_model_path, self.policy_net, RANDOM_CHOICE) # layer: p
-                # played, won, ratio  = self.learn_from_other_model(episode, learning_rate, game, BASELINE_MODEL_PATH, self.policy_net, RANDOM_CHOICE)
-                # played, won, ratio  = self.learn_from_other_model(episode, learning_rate, game, 'model_dump/simple_dense_nn_net_2024-06-01_21-49-43_dense_nn_psbrsbp_010624_1759b14a-2050-11ef-bdc1-acde48001122.keras', self.policy_net, RANDOM_CHOICE)
-                # played, won, ratio  = self.learn_selfplay_black(episode, learning_rate, game, policy_net, RANDOM_CHOICE) # layer: b
-                # played, won, ratio  = self.learn_from_other_model(episode, learning_rate, game, 'model_dump/simple_dense_nn_net_2024-06-01_23-10-51_loop20_dense_nn_psbrsbp_010624_6cfbff9e-205b-11ef-a149-acde48001122.keras', self.policy_net, RANDOM_CHOICE)
-                # played, won, ratio  = self.learn_selfplay_black(episode, learning_rate, game, policy_net, RANDOM_CHOICE) # layer: b
-                # played, won, ratio  = self.learn_from_other_model(episode, learning_rate, game, 'model_dump/complex_hex_policy_conv_net_2024-06-01_23-32-35_conc_22loop20_dense_nn_psbrsbp_010624_763bbe0c-205e-11ef-bb91-acde48001122.keras', self.policy_net, RANDOM_CHOICE)
-                # played, won, ratio  = self.learn_from_other_model(episode, learning_rate, game, 'model_dump/simple_dense_nn_net_2024-06-02_00-09-19_dens_20conc_20loop20_dense_nn_psbrsbp_010624_97b4ef18-2063-11ef-9419-acde48001122.keras', self.policy_net, RANDOM_CHOICE)
-       
+
         end = time.time()
         training_time = end - start
         ############################################# Execution of Training Loop - End #################################################
@@ -1335,6 +1347,23 @@ class REINFORCE_Agent():
     
         
         return result
+    
+
+    def recode_black_as_white(self, board, print=False, invert_colors=True):
+        """
+        Returns a board where black is recoded as white and wants to connect horizontally.
+        This corresponds to flipping the board along the south-west to north-east diagonal and swapping colors.
+        This may be used to train AI players in a 'color-blind' way.
+        """
+        flipped_board = [[0 for i in range(self.board_size)] for j in range(self.board_size)]
+        # flipping and color change
+        for i in range(self.board_size):
+            for j in range(self.board_size):
+                if board[self.board_size - 1 - j][self.board_size - 1 - i] == 1:
+                    flipped_board[i][j] = -1
+                if board[self.board_size - 1 - j][self.board_size - 1 - i] == -1:
+                    flipped_board[i][j] = 1
+        return flipped_board
 
 
 
