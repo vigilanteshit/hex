@@ -1,6 +1,7 @@
 import Agent
 import hex_engine
 
+
 BOARD_SIZE = 7
 NUMBER_OF_EVAL_GAMES = 20
 

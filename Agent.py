@@ -1,20 +1,18 @@
 import PolicyNet
 import hex_engine
 import tensorflow as tf
-import heapq
+#import heapq
 import numpy as np
 import keras
-import math
+#import math
 import datetime
 import os
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from numpy.random import choice
-import csv
+#import csv
 import uuid
 import time
-import tqdm
 import ast  
 import re
 
